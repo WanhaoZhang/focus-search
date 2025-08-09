@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "name": "Focus Search",
+  "version": "1.1",
+  "description": "将Safari主页变成简洁的搜索界面，快速搜索知乎、小红书、抖音、B站",
+  
+  "permissions": [
+    "storage"
+  ],
+  
+  "chrome_url_overrides": {
+    "newtab": "safari-newtab.html"
+  },
+  
+  "browser_action": {
+    "default_title": "Focus Search"
+  },
+  
+  "content_security_policy": "script-src 'self'; object-src 'self'",
+  
+  "web_accessible_resources": [
+    "safari-newtab.html",
+    "safari-newtab.css", 
+    "safari-newtab.js"
+  ]
+}

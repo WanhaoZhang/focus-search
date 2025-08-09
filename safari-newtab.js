@@ -1,3 +1,64 @@
+// Safari 存储 API 兼容层
+const SafariStorage = {
+    get: function(keys, callback) {
+        if (typeof safari !== 'undefined' && safari.extension) {
+            // Safari 扩展 API
+            const result = {};
+            if (Array.isArray(keys)) {
+                keys.forEach(key => {
+                    result[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                });
+            } else if (typeof keys === 'object') {
+                Object.keys(keys).forEach(key => {
+                    result[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                });
+            } else {
+                result[keys] = JSON.parse(localStorage.getItem(keys) || 'null');
+            }
+            callback(result);
+        } else {
+            // 降级到 localStorage
+            const result = {};
+            if (Array.isArray(keys)) {
+                keys.forEach(key => {
+                    result[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                });
+            } else if (typeof keys === 'object') {
+                Object.keys(keys).forEach(key => {
+                    result[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                });
+            } else {
+                result[keys] = JSON.parse(localStorage.getItem(keys) || 'null');
+            }
+            callback(result);
+        }
+    },
+    
+    set: function(items, callback) {
+        if (typeof safari !== 'undefined' && safari.extension) {
+            // Safari 扩展 API
+            Object.keys(items).forEach(key => {
+                localStorage.setItem(key, JSON.stringify(items[key]));
+            });
+        } else {
+            // 降级到 localStorage
+            Object.keys(items).forEach(key => {
+                localStorage.setItem(key, JSON.stringify(items[key]));
+            });
+        }
+        if (callback) callback();
+    },
+    
+    remove: function(keys, callback) {
+        if (Array.isArray(keys)) {
+            keys.forEach(key => localStorage.removeItem(key));
+        } else {
+            localStorage.removeItem(keys);
+        }
+        if (callback) callback();
+    }
+};
+
 // 搜索网站配置
 const DEFAULT_SITES = {
     zhihu: {
@@ -75,7 +136,7 @@ function initializeElements() {
 
 // 加载自定义网站和处理隐藏的默认网站
 function loadCustomSites() {
-    chrome.storage.local.get(['customSites', 'hiddenSites'], function(result) {
+    SafariStorage.get(['customSites', 'hiddenSites'], function(result) {
         const customSites = result.customSites || {};
         const hiddenSites = result.hiddenSites || [];
         
@@ -224,11 +285,11 @@ function deleteSite(siteKey) {
     if (confirm(`确定要删除 ${siteName} 吗？删除后可以通过"添加网站"重新添加。`)) {
         if (DEFAULT_SITES[siteKey]) {
             // 删除默认网站 - 添加到隐藏列表
-            chrome.storage.local.get(['hiddenSites'], function(result) {
+            SafariStorage.get(['hiddenSites'], function(result) {
                 const hiddenSites = result.hiddenSites || [];
                 if (!hiddenSites.includes(siteKey)) {
                     hiddenSites.push(siteKey);
-                    chrome.storage.local.set({ hiddenSites }, function() {
+                    SafariStorage.set({ hiddenSites }, function() {
                         // 从当前显示中移除
                         delete SEARCH_SITES[siteKey];
                         
@@ -247,12 +308,12 @@ function deleteSite(siteKey) {
             });
         } else {
             // 删除自定义网站
-            chrome.storage.local.get(['customSites'], function(result) {
+            SafariStorage.get(['customSites'], function(result) {
                 const customSites = result.customSites || {};
                 delete customSites[siteKey];
                 delete SEARCH_SITES[siteKey];
                 
-                chrome.storage.local.set({ customSites }, function() {
+                SafariStorage.set({ customSites }, function() {
                     // 如果删除的是当前选中的网站，切换到剩余的第一个网站
                     if (currentSite === siteKey) {
                         const remainingSites = Object.keys(SEARCH_SITES);
@@ -426,11 +487,11 @@ function confirmAddSite() {
     };
     
     // 保存到存储
-    chrome.storage.local.get(['customSites'], function(result) {
+    SafariStorage.get(['customSites'], function(result) {
         const customSites = result.customSites || {};
         customSites[siteKey] = newSite;
         
-        chrome.storage.local.set({ customSites }, function() {
+        SafariStorage.set({ customSites }, function() {
             SEARCH_SITES[siteKey] = newSite;
             renderSiteGrid();
             hideAddSiteModal();
@@ -466,7 +527,7 @@ function generateSiteKey(name) {
 // 恢复默认网站
 function restoreDefaultSites() {
     if (confirm('确定要恢复所有默认网站吗？这将显示知乎、小红书、抖音、B站等默认网站。')) {
-        chrome.storage.local.remove('hiddenSites', function() {
+        SafariStorage.remove('hiddenSites', function() {
             // 重新加载网站配置
             loadCustomSites();
             hideAddSiteModal();
@@ -481,7 +542,7 @@ function restoreDefaultSites() {
 
 // 检查是否显示指导提示
 function checkGuideTipsVisibility() {
-    chrome.storage.local.get(['hideTips', 'customSites'], function(result) {
+    SafariStorage.get(['hideTips', 'customSites'], function(result) {
         const hideTips = result.hideTips || false;
         const customSites = result.customSites || {};
         const hasCustomSites = Object.keys(customSites).length > 0;
@@ -499,7 +560,7 @@ function hideGuideTips(saveToStorage = true) {
         guideTips.classList.add('hidden');
         
         if (saveToStorage) {
-            chrome.storage.local.set({ hideTips: true });
+            SafariStorage.set({ hideTips: true });
         }
         
         // 动画结束后移除元素
@@ -550,7 +611,7 @@ function saveSearchRecord(keyword, siteKey, siteName) {
         id: generateId()
     };
     
-    chrome.storage.local.get(['searchHistory'], function(result) {
+    SafariStorage.get(['searchHistory'], function(result) {
         let history = result.searchHistory || [];
         
         // 避免重复记录（相同关键词和网站）
@@ -566,7 +627,7 @@ function saveSearchRecord(keyword, siteKey, siteName) {
             history = history.slice(0, 50);
         }
         
-        chrome.storage.local.set({ searchHistory: history }, function() {
+        SafariStorage.set({ searchHistory: history }, function() {
             loadHistory();
         });
     });
@@ -574,7 +635,7 @@ function saveSearchRecord(keyword, siteKey, siteName) {
 
 // 加载历史记录
 function loadHistory() {
-    chrome.storage.local.get(['searchHistory'], function(result) {
+    SafariStorage.get(['searchHistory'], function(result) {
         const history = result.searchHistory || [];
         displayHistory(history);
     });
@@ -706,11 +767,11 @@ function createHistoryItem(record) {
 
 // 删除单条记录
 function deleteRecord(recordId) {
-    chrome.storage.local.get(['searchHistory'], function(result) {
+    SafariStorage.get(['searchHistory'], function(result) {
         let history = result.searchHistory || [];
         history = history.filter(record => record.id !== recordId);
         
-        chrome.storage.local.set({ searchHistory: history }, function() {
+        SafariStorage.set({ searchHistory: history }, function() {
             loadHistory();
         });
     });
@@ -719,7 +780,7 @@ function deleteRecord(recordId) {
 // 清空所有历史记录
 function clearAllHistory() {
     if (confirm('确定要清空所有搜索记录吗？')) {
-        chrome.storage.local.set({ searchHistory: [] }, function() {
+        SafariStorage.set({ searchHistory: [] }, function() {
             loadHistory();
             hideHistory();
         });
@@ -798,15 +859,15 @@ function escapeHtml(text) {
 
 // 快捷键支持
 document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + K 聚焦搜索框
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    // Cmd + K 聚焦搜索框 (Safari主要使用Cmd键)
+    if (e.metaKey && e.key === 'k') {
         e.preventDefault();
         searchInput.focus();
         searchInput.select();
     }
     
-    // Alt + 数字键快速切换搜索网站
-    if (e.altKey && !isNaN(e.key) && e.key >= '1' && e.key <= '3') {
+    // Option + 数字键快速切换搜索网站 (Safari使用Option键)
+    if (e.altKey && !isNaN(e.key) && e.key >= '1' && e.key <= '4') {
         e.preventDefault();
         const sites = ['zhihu', 'xiaohongshu', 'douyin', 'bilibili'];
         const siteIndex = parseInt(e.key) - 1;
@@ -828,11 +889,7 @@ window.addEventListener('error', function(e) {
     console.error('Focus Search Error:', e.error);
 });
 
-// 处理Chrome扩展API错误
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.action === 'searchError') {
-            console.error('Search error:', request.error);
-        }
-    });
+// Safari 特定的初始化
+if (typeof safari !== 'undefined' && safari.extension) {
+    console.log('Safari Extension Loaded: Focus Search');
 }

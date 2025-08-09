@@ -1,17 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Focus Search",
-  "version": "1.0",
-  "description": "快速搜索知乎、小红书、百度的 Chrome 插件",
+  "version": "1.1",
+  "description": "将浏览器主页变成简洁的搜索界面，快速搜索知乎、小红书、抖音、B站",
   "permissions": [
-    "storage",
-    "activeTab"
+    "storage"
   ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Focus Search"
-  },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
+  },
+  "action": {
+    "default_title": "Focus Search",
+    "default_popup": "newtab.html"
   }
 }
