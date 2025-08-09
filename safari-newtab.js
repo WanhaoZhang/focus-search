@@ -86,7 +86,7 @@ let SEARCH_SITES = { ...DEFAULT_SITES };
 let searchInput, searchBtn, clearAllBtn, historyList, historyPanel, historyContent, historyToggle, collapseBtn, historyCount, todayCount, totalCount, loadMoreBtn;
 let addSiteBtn, addSiteModal, modalClose, modalCancel, modalConfirm, siteNameInput, siteUrlInput, siteIconInput;
 let guideTips, hideTipsBtn, restoreDefaultBtn;
-let currentSite = 'zhihu';
+let currentSite = null; // 默认不选择任何搜索平台，使用默认搜索引擎
 let selectedColor = '#ff6b35';
 
 // 初始化
@@ -151,13 +151,8 @@ function loadCustomSites() {
         // 合并可见的默认网站和自定义网站
         SEARCH_SITES = { ...visibleDefaultSites, ...customSites };
         
-        // 如果当前选中的网站被隐藏了，切换到第一个可用的网站
-        if (!SEARCH_SITES[currentSite]) {
-            const availableSites = Object.keys(SEARCH_SITES);
-            if (availableSites.length > 0) {
-                currentSite = availableSites[0];
-            }
-        }
+        // 保持默认状态：不选择任何网站
+        currentSite = null;
         
         renderSiteGrid();
     });
@@ -191,7 +186,7 @@ function renderSiteGrid() {
 function updateActiveState() {
     document.querySelectorAll('.site-card').forEach(btn => {
         const icon = btn.querySelector('.site-icon');
-        if (btn.dataset.site === currentSite) {
+        if (btn.dataset.site === currentSite && currentSite !== null) {
             btn.classList.add('active');
             if (icon.classList.contains('custom-site-icon')) {
                 const originalColor = icon.dataset.originalColor;
@@ -581,21 +576,36 @@ function performSearch() {
         return;
     }
     
-    const siteConfig = SEARCH_SITES[currentSite];
-    
-    // URL 编码关键词
-    const encodedKeyword = encodeURIComponent(keyword);
     let searchUrl;
+    let siteName;
+    let siteKey;
     
-    // 处理不同的URL格式
-    if (siteConfig.url.includes('{keyword}')) {
-        searchUrl = siteConfig.url.replace('{keyword}', encodedKeyword);
+    // 检查是否有选中的搜索平台
+    const activeButton = document.querySelector('.site-card.active');
+    
+    if (activeButton && currentSite && SEARCH_SITES[currentSite]) {
+        // 使用选定的搜索平台
+        const siteConfig = SEARCH_SITES[currentSite];
+        const encodedKeyword = encodeURIComponent(keyword);
+        
+        // 处理不同的URL格式
+        if (siteConfig.url.includes('{keyword}')) {
+            searchUrl = siteConfig.url.replace('{keyword}', encodedKeyword);
+        } else {
+            searchUrl = siteConfig.url + encodedKeyword;
+        }
+        siteName = siteConfig.name;
+        siteKey = currentSite;
     } else {
-        searchUrl = siteConfig.url + encodedKeyword;
+        // 使用默认搜索引擎（Google）
+        const encodedKeyword = encodeURIComponent(keyword);
+        searchUrl = `https://www.google.com/search?q=${encodedKeyword}`;
+        siteName = 'Google';
+        siteKey = 'google';
     }
     
     // 保存搜索记录
-    saveSearchRecord(keyword, currentSite, siteConfig.name);
+    saveSearchRecord(keyword, siteKey, siteName);
     
     // 在当前标签页打开搜索结果
     window.location.href = searchUrl;
